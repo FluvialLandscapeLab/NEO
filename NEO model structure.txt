@@ -1,0 +1,14 @@
+network (igraph)
+currencies
+  currency (with attrs)
+    myBehaviors
+behaviors
+  behavior (with attrs)
+    myDynams
+dynams
+   dynam (with attrs)
+      myHolons = calculated by looking up behaviors that contain the dynam, holonTypes that contain the behaviors, and holons that are of the holonTypes
+
+holonTypes
+  holonType (with attrs)
+    myBehaviors

@@ -88,9 +88,21 @@ doit = function() {
 # BUILD THE MODEL!!!
   NEO_DynamMyHolons(helton)
   NEO_DynamContexts(helton)
-  NEO_Dynam
+  NEO_XamDependencies(helton)
 
   invisible(helton)
+}
+
+NEO_XamDependencies = function(model) {
+  xamList = c(as.list(model$dynams), as.list(model$statims))
+  calcArgsList = lapply(xamList, attr, which = "calcArguments")
+  contextList = lapply(calcArgsList, function(x) structure(x[, 1], names = row.names(x)))
+  attributeList = lapply(calcArgsList, function(x) structure(x[, 2], names = row.names(x)))
+
+  NEO_IdentitiesFromContexts = function(contextName, xam) {
+
+
+  }
 }
 
 makeNetwork = function() {
@@ -122,6 +134,7 @@ makeNetwork = function() {
   return(network)
 }
 
+# gets objectes in the "names" list from a NEO_Bin object.
 NEO_EnvironmentList = function(names, NEO_Bin) {
   envList =
     lapply(

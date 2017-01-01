@@ -46,7 +46,7 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
   # context names and attributes passed as arguments to the dynam calculation.
   # One column for each argument.
   splitDots =
-    sapply(
+    lapply(
       dots,
       function(x) {
         conAttr = unlist(strsplit(x, split = ".", fixed = TRUE))
@@ -56,7 +56,7 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
       }
     )
 
-  dimnames(splitDots)[[1]] = c("context", "attribute")
+  splitDots = t(matrix(unlist(splitDots), nrow = 2, dimnames = list(c("context", "attribute"), names(splitDots))))
 
   newXam = NEO_Environment(xamName, model[[xamTypes]], paste0("NEO_", xamTypeCap))
 
@@ -66,9 +66,9 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
   #   stop("The NEO_calculation '", calculationName, "' uses parameter names (", paste0(names(dots)[duplicateNames], collapse = ", "), ") that collide with default variable names used by dyanms.  Rewrite the calculation to use different parameter names.")
   # }
 
-  newXam$myHolons = NULL
+  newXam$contexts = NEO_Environment("contexts", newXam, "NEO_Bin")
   attr(newXam, "attribute") = attributeName
-  attr(newXam, "calcArguments") = splitDots
+  attr(newXam, "calcArguments") = as.data.frame(splitDots, stringsAsFactors = F)
   attr(newXam, "calculation") = calculation
 
   return(newXam)
@@ -151,19 +151,27 @@ NEO_DynamMyHolons = function(model) {
 }
 
 NEO_DynamContexts = function(model) {
+
+  # create "myHolons" context
+  NEO_DynamMyHolons(model)
+
+  # gather list of dynams and statams
   xamList = c(as.list(model$dynams), as.list(model$statims))
 
+  # extract the class
   contextNamesByXam = lapply(xamList, function(d) attr(d, which = "dependencies")["context",])
   contextNamesByXam = lapply(contextNamesByXam, function(nm) unique(nm[nm != "myHolons"]))
-  contextsByXam = lapply(contextNamesByXam, NEO_EnvironmentList, NEO_Bin = model$contexts)
+  contextsByXam = lapply(contextNamesByXam, function(ns) as.list(model$contexts)[ns])
 
   mapply(
     function(xam, contexts) {
       lapply(
         contexts,
         function(con) {
+          conName = attr(con, "name")
+          if(conName %in% ls(xam$contexts)) stop("Attempt to define context '", conName, "' in ", attr(xam, "class")[1], " '", attr(xam, "name"), "'.")
           environment(con$context) = xam
-          xam[[attr(con, "name")]] = con$context(xam$myHolons)
+          xam$contexts[[conName]] = con$context(xam$myHolons)
         }
       )
     },
