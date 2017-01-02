@@ -40,10 +40,10 @@ doit = function() {
     }
   )
 
-  NEO_Context("fromEdgeList", helton, function(holons) lapply(holons, function(.v) E(network)[from(.v)]))
-  NEO_Context("toEdgeList", helton, function(holons) lapply(holons, function(.v) E(network)[to(.v)]))
-  NEO_Context("fromVertices", helton, function(holons) V(network)[from(holons)])
-  NEO_Context("toVertices", helton, function(holons) V(network)[to(holons)])
+  NEO_Context("fromEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[to(.v)]))
+  NEO_Context("toEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[from(.v)]))
+  NEO_Context("fromVertices", helton, function() V(network)[from(myHolons)])
+  NEO_Context("toVertices", helton, function() V(network)[to(myHolons)])
 
   NEO_Dynam(
     "accumulateWater",
@@ -63,7 +63,7 @@ doit = function() {
     value = "fromVertices.water"
   )
 
-  NEO_Statim(
+  NEO_Statam(
     "produceWater",
     helton,
     "multiply",
@@ -75,9 +75,9 @@ doit = function() {
   NEO_Phase("trade", helton, 1, dynamList = list("transferAllWater"))
   NEO_Phase("store", helton, 2, dynamList = list("accumulateWater"))
 
-  NEO_Behavior("waterAccumulationVertex", helton, statimList = list(), dynamList = list("accumulateWater"))
-  NEO_Behavior("waterAccumulationEdge", helton, statimList = list(), dynamList = list("transferAllWater"))
-  NEO_Behavior("waterConstantYield", helton, statimList = list("produceWater"), dynamList = list())
+  NEO_Behavior("waterAccumulationVertex", helton, statamList = list(), dynamList = list("accumulateWater"))
+  NEO_Behavior("waterAccumulationEdge", helton, statamList = list(), dynamList = list("transferAllWater"))
+  NEO_Behavior("waterConstantYield", helton, statamList = list("produceWater"), dynamList = list())
 
   NEO_Identity("StreamSegment.Accumulation", helton, behaviorList = list("waterAccumulationVertex"))
   NEO_Identity("StreamXSec.TransferAll", helton, behaviorList = list("waterAccumulationEdge"))
@@ -85,24 +85,17 @@ doit = function() {
 
   helton$network = makeNetwork()
 
-# BUILD THE MODEL!!!
-  NEO_DynamMyHolons(helton)
-  NEO_DynamContexts(helton)
-  NEO_XamDependencies(helton)
+  NEO_Build(helton)
 
   invisible(helton)
 }
 
 NEO_XamDependencies = function(model) {
-  xamList = c(as.list(model$dynams), as.list(model$statims))
+  xamList = c(as.list(model$dynams), as.list(model$statams))
   calcArgsList = lapply(xamList, attr, which = "calcArguments")
-  contextList = lapply(calcArgsList, function(x) structure(x[, 1], names = row.names(x)))
-  attributeList = lapply(calcArgsList, function(x) structure(x[, 2], names = row.names(x)))
+  holonsList = lapply(calcArgsList, function(x) structure(x[, "holons"], names = row.names(x)))
+  attributeList = lapply(calcArgsList, function(x) structure(x[, "attribute"], names = row.names(x)))
 
-  NEO_IdentitiesFromContexts = function(contextName, xam) {
-
-
-  }
 }
 
 makeNetwork = function() {
@@ -134,22 +127,22 @@ makeNetwork = function() {
   return(network)
 }
 
-# gets objectes in the "names" list from a NEO_Bin object.
-NEO_EnvironmentList = function(names, NEO_Bin) {
-  envList =
-    lapply(
-      names,
-      function(nm) {
-        if(nm == "myHolons") {
-          target = NULL
-        } else {
-          target = NEO_Bin[[nm]]
-          if(is.null(target)) stop("Item '", nm, "', requested from model$", attr(NEO_Bin, "name"), ", does not exist.")
-        }
-        return(target)
-      }
-    )
-  names(envList) = lapply(envList, attr, which = "name")
-  return(envList)
-}
+# # gets objectes in the "names" list from a NEO_Bin object.
+# NEO_EnvironmentList = function(names, NEO_Bin) {
+#   envList =
+#     lapply(
+#       names,
+#       function(nm) {
+#         if(nm == "myHolons") {
+#           target = NULL
+#         } else {
+#           target = NEO_Bin[[nm]]
+#           if(is.null(target)) stop("Item '", nm, "', requested from model$", attr(NEO_Bin, "name"), ", does not exist.")
+#         }
+#         return(target)
+#       }
+#     )
+#   names(envList) = lapply(envList, attr, which = "name")
+#   return(envList)
+# }
 

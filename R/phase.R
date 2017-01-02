@@ -1,3 +1,4 @@
+#' @export
 NEO_Phase = function(phaseName, model, order, dynamList) {
 
   newPhase = NEO_Environment(phaseName, model$phases, "NEO_Context")

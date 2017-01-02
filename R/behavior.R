@@ -1,8 +1,9 @@
-NEO_Behavior = function(behaviorName, model, statimList, dynamList) {
+#' @export
+NEO_Behavior = function(behaviorName, model, statamList, dynamList) {
   newBehavior = NEO_Environment(behaviorName, model$behaviors, "NEO_Behavior")
 
   newBehavior$myDynams = dynamList
-  newBehavior$myStatims = statimList
+  newBehavior$myStatams = statamList
 
   invisible(newBehavior)
 }

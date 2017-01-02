@@ -1,6 +1,6 @@
 #' @export
-NEO_Statim = function(statimName, model, calculationName, attributeName, ...) {
+NEO_Statam = function(statamName, model, calculationName, attributeName, ...) {
 
-  invisible(NEO_Xam(statimName, model, calculationName, attributeName, "statim", ...))
+  invisible(NEO_Xam(statamName, model, calculationName, attributeName, "statam", ...))
 
 }

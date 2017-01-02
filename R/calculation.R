@@ -1,3 +1,4 @@
+#' @export
 NEO_Calculation = function(calculationName, model, fun) {
 
   newCalculation = NEO_Environment(calculationName, model$calculations, "NEO_Calculation")

@@ -1,3 +1,4 @@
+#' @export
 NEO_Environment = function(envirName, parent, class) {
 
   if(envirName %in% ls(parent)) stop("Attempt to define", class, " '", envirName, "' more than once.")
