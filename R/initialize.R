@@ -2,19 +2,21 @@
 NEO_Initialize = function(model) {
   # BUILD THE MODEL!!!
   NEO_XamContexts(model)
-  NEO_XamDependencies(model)
+  NEO_XamDependencies(model, "statams")
+  NEO_XamDependencies(model, "dynams")
 }
 
 NEO_XamContexts = function(model) {
   
   # create "myHolons" context
-  NEO_XamMyHolons(model)
+  NEO_XamMyHolons(model, "statams")
+  NEO_XamMyHolons(model, "dynams")
   
   # gather list of dynams and statams
   xamList = c(as.list(model$dynams), as.list(model$statams))
   
   # extract the class
-  contextNamesByXam = lapply(xamList, function(d) attr(d, which = "calcArguments")[,"holons"])
+  contextNamesByXam = lapply(xamList, function(d) attr(d, which = "calcHolonCollections"))
   contextNamesByXam = lapply(contextNamesByXam, function(nm) unique(nm[nm != "myHolons"]))
   contextsByXam = lapply(contextNamesByXam, function(ns) as.list(model$contexts)[ns])
   
@@ -43,42 +45,44 @@ NEO_XamContexts = function(model) {
   invisible(model)
 }
 
-NEO_XamMyHolons = function(model) {
+NEO_XamMyHolons = function(model, xamBinName) {
+  capXamType = paste0(toupper(substr(xamBinName, 1, 1)), substr(xamBinName, 2, nchar(xamBinName) - 1))
+  xamCollection = paste0("my", capXamType, "s")
   #make lists of all dynams, behaviors, and identities
-  dynamList = c(as.list(model$dynams), as.list(model$statams))
+  xamList = as.list(model[[xamBinName]])
   behaviorList = as.list(model$behaviors)
   identityList = as.list(model$identities)
   
-  #make a list of logical vectors (one for each dynam) that says if the dyanam
+  #make a list of logical vectors (one for each dynam) that says if the xam
   #is referenced by the behavior
-  dynamInBehavior =
+  xamInBehavior =
     lapply(
-      dynamList,
-      function(d) {
+      xamList,
+      function(xam) {
         sapply(
           behaviorList,
-          function(b, d) {
-            attr(d, "name") %in% b$myDynams
+          function(b, x) {
+            attr(x, "name") %in% names(b[[xamCollection]])
           },
-          d = d
+          x = xam
         )
       }
     )
   
   #convert to a list of character vectors (one for each dynam) that contains
   #associated behavior names
-  behaviorsByDynam = lapply(dynamInBehavior, function(x) names(x)[x])
+  behaviorsByXam = lapply(xamInBehavior, function(x) names(x)[x])
   
   #make a list of logical vectors (one for each dynams) that says wether any
   #associated behaviors is referenced by each identity
   behaviorInIdentity =
     lapply(
-      behaviorsByDynam,
+      behaviorsByXam,
       function(behaviors) {
         sapply(
           identityList,
           function(i, behaviors) {
-            any(behaviors %in% i$myBehaviors)
+            any(behaviors %in% names(i$myBehaviors))
           },
           behaviors = behaviors
         )
@@ -87,34 +91,35 @@ NEO_XamMyHolons = function(model) {
   
   #convert to a list of character vectors (one for each dynam) that contains
   #associated identity names.
-  identitiesByDynam = lapply(behaviorInIdentity, function(x) names(x)[x])
+  identitiesByXam = lapply(behaviorInIdentity, function(x) names(x)[x])
   
   #for each dynam, get the collection of edges and vertices that have any of the
   #identities associated with the dynam
   edges = E(model$network)
   verts = V(model$network)
-  edgesByDynam = lapply(identitiesByDynam, function(i) edges[edges$identity %in% i])
-  vertsByDynam = lapply(identitiesByDynam, function(i) verts[verts$identity %in% i])
+  edgesByXam = lapply(identitiesByXam, function(i) edges[edges$identity %in% i])
+  vertsByXam = lapply(identitiesByXam, function(i) verts[verts$identity %in% i])
   
   #check to be sure one dynam isn't associated with both edges and vertices, and
   #if not, combine the edge and verts list.
-  holonsByDynam =
+  holonsByXam =
     mapply(
       function (es, vs, name){
-        if(length(es) != 0 && length(vs) != 0) stop("NEO_Dynam '", name, "' is associated with both edges and vertices.")
+        if(length(es) != 0 && length(vs) != 0) stop("NEO_", capXamType, "'", name, "' is associated with both edges and vertices.")
         if(length(es > 0)) {
           return(es)
         } else {
           return(vs)
         }
       },
-      edgesByDynam,
-      vertsByDynam,
-      names(edgesByDynam)
+      edgesByXam,
+      vertsByXam,
+      names(edgesByXam),
+      SIMPLIFY = F
     )
   
   # set the myHolons variable in each dynam
-  mapply(function(d, hL) d$holons$myHolons = hL, dynamList, holonsByDynam)
+  mapply(function(d, hL) d$holons$myHolons = hL, xamList, holonsByXam)
   
   invisible(model)
 }

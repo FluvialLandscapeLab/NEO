@@ -37,7 +37,7 @@ print.NEO_Environment = function(x) {
 
   args(helton$calculations$accumulate$calculation)
 
-  cat(attr(x, "name"))
+  cat(attr(x, "name"), " (", class(x)[1], ")", sep = "")
   lapply(
     ls(x),
     function(.x) {

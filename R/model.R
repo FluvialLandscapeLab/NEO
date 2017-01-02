@@ -27,7 +27,7 @@ NEO_Model = function(modelName, units = NEO_DefaultUnits(), envir = globalenv())
 #' @export
 as.list.NEO_Bin = function(x) {
   binList = lapply(ls(x), get, envir = x, inherits = F)
-  names(binList) = sapply(binList, attr, which = "name")
+  names(binList) = ls(x)
   return(binList)
 }
 
@@ -36,7 +36,7 @@ NEO_DefaultUnits = function() return(c(L = "m", t = "s", M = "kg", T = "degC", E
 
 #' @export
 NEO_HolonAttr = function(holons, model, attributeName) {
-  UseMethod("NEO_HolonAttr", holons, model, attributeName)
+  UseMethod("NEO_HolonAttr", holons)
 }
 
 #' @export

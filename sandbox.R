@@ -39,12 +39,21 @@ doit = function() {
       operand1 * operand2
     }
   )
+  
+  NEO_Calculation(
+    "divide",
+    helton,
+    function(numerator, denominator) {
+      numerator / denominator
+    }
+  )
 
   NEO_Context("fromEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[to(.v)]))
   NEO_Context("toEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[from(.v)]))
   NEO_Context("fromVertices", helton, function() V(network)[from(myHolons)])
   NEO_Context("toVertices", helton, function() V(network)[to(myHolons)])
 
+  # WATER: VERTICES
   NEO_Dynam(
     "accumulateWater",
     helton,
@@ -54,15 +63,7 @@ doit = function() {
     gains = "fromEdgeList.water",
     losses = "toEdgeList.water"
   )
-
-  NEO_Dynam(
-    "transferAllWater",
-    helton,
-    "echoValue",
-    "water",
-    value = "fromVertices.water"
-  )
-
+  
   NEO_Statam(
     "produceWater",
     helton,
@@ -72,30 +73,155 @@ doit = function() {
     operand2 = "myHolons.waterYield"
   )
 
-  NEO_Phase("trade", helton, 1, dynamList = list("transferAllWater"))
-  NEO_Phase("store", helton, 2, dynamList = list("accumulateWater"))
+  # WATER: EDGES
+  NEO_Dynam(
+    "transferAllWater",
+    helton,
+    "echoValue",
+    "water",
+    value = "fromVertices.water"
+  )
+  
+  # NO3 VERTICES
+  NEO_Dynam(
+    "accumulateNO3",
+    helton,
+    "accumulate",
+    "NO3",
+    storage = "myHolons.NO3",
+    gains = "fromEdgeList.NO3",
+    losses = "toEdgeList.NO3"
+  )
+  
+  NEO_Dynam(
+    "dissolveNO3",
+    helton,
+    "divide",
+    "NO3Conc",
+    numerator = "myHolons.NO3",
+    denominator = "myHolons.water"
+  )
 
-  NEO_Behavior("waterAccumulationVertex", helton, statamList = list(), dynamList = list("accumulateWater"))
-  NEO_Behavior("waterAccumulationEdge", helton, statamList = list(), dynamList = list("transferAllWater"))
-  NEO_Behavior("waterConstantYield", helton, statamList = list("produceWater"), dynamList = list())
+  # NO3 EDGES
+  NEO_Dynam(
+    "advectNO3",
+    helton,
+    "multiply",
+    "NO3",
+    operand1 = "fromVertices.NO3Conc",
+    operand2 = "myHolons.water"
+  )
+  
+  
+  NEO_Phase("trade", helton, 1, dynamNames = c("transferAllWater", "advectNO3"))
+  NEO_Phase("store", helton, 2, dynamNames = c("accumulateWater", "accumulateNO3", "dissolveNO3"))
 
-  NEO_Identity("StreamSegment.Accumulation", helton, behaviorList = list("waterAccumulationVertex"))
-  NEO_Identity("StreamXSec.TransferAll", helton, behaviorList = list("waterAccumulationEdge"))
-  NEO_Identity("HillSlope.ConstantYeild", helton, behaviorList = list("waterConstantYield"))
+  NEO_Behavior("vertexWaterAccumulation", helton, dynamNames = c("accumulateWater"))
+  NEO_Behavior("edgeWaterAccumulation", helton, dynamNames = c("transferAllWater"))
+  NEO_Behavior("vertexWaterConstantYield", helton, statamNames = c("produceWater"))
+  NEO_Behavior("edgeNO3Advection", helton, dynamNames = c("advectNO3"))
+  NEO_Behavior("vertexNO3Accumulation", helton, dynamNames = c("accumulateNO3", "dissolveNO3"))
+
+  NEO_Identity("StreamSegment.Accumulation", helton, behaviorNames = c("vertexWaterAccumulation", "vertexNO3Accumulation"))
+  NEO_Identity("StreamXSec.TransferAll", helton, behaviorNames = c("edgeWaterAccumulation", "edgeNO3Advection"))
+  NEO_Identity("HillSlope.ConstantYield", helton, behaviorNames = c("vertexWaterConstantYield"))
 
   helton$network = makeNetwork()
 
-  NEO_Build(helton)
+  NEO_Initialize(helton)
 
   invisible(helton)
 }
 
-NEO_XamDependencies = function(model) {
-  xamList = c(as.list(model$dynams), as.list(model$statams))
-  calcArgsList = lapply(xamList, attr, which = "calcArguments")
-  holonsList = lapply(calcArgsList, function(x) structure(x[, "holons"], names = row.names(x)))
-  attributeList = lapply(calcArgsList, function(x) structure(x[, "attribute"], names = row.names(x)))
+NEO_XamDependencies = function(model, xamBinName) {
+  
+  xamCollection = paste0("my", toupper(substr(xamBinName, 1, 1)), substr(xamBinName, 2, nchar(xamBinName)))
+  
+  #get all of the dynams and statams
+  xamList = as.list(model[[xamBinName]])
+  
+  #subset the xamList according to the "target" -- that is the variable
+  #calculated by the dyanam.  This will be useful later.
+  xamTargetAttr = sapply(xamList, attr, "targetAttr")
+  xamsByTarget = 
+    sapply(
+      unique(xamTargetAttr), 
+      function(tA) {
+        xamList[xamTargetAttr == tA]
+      },
+      simplify = F
+    )
 
+  # get the holon collections and attributes that are passed to the xam calculation  
+  calcHolonCollectionNamesByXam = 
+    sapply(
+      xamList, 
+      function(xam) structure(attr(xam, "calcHolonCollections"), names = attr(xam, "calcHolonAttrs")),
+      simplify = F
+    )
+  calcHolonAttrsNamesByXam = sapply(xamList, attr, "calcHolonAttrs", simplify = F)
+
+  willy = function(behavior, dependencyAttr, xam, dynamsNamesByPhaseList, xamPhase) {
+    #for each behavior, get the xams
+    potentialDependencies = behavior[[xamCollection]]
+    #determine which xams calculate the dependencyAttr of the holonCollection
+    pDIdx = sapply(potentialDependencies, attr, "targetAttr") == dependencyAttr
+    #determine which potential dependencies are in the same
+    #calculation phase as the xam
+    if (inherits(xam, "NEO_Dynam")) {
+      pDIdx = pDIdx & (names(potentialDependencies) %in% dynamsNamesByPhaseList[[xamPhase]])
+    }
+    potentialDependencies[pDIdx]
+  }
+  
+  
+   
+  TESTIT =  function(holonCollectionNamesByDependencyAttr, xam) {
+    xamTargetAttr = attr(xam, "targetAttr")
+    dynamsNamesByPhaseList = lapply(as.list(model$phases), function(phase) names(phase$myDynams))
+    xamPhase = names(dynamsNamesByPhaseList)[sapply(dynamsNamesByPhaseList, function(dNames) attr(xam, "name") %in% dNames)]
+    
+    holonCollectionsByDependencyAttr = lapply(holonCollectionNamesByDependencyAttr, function(cHC) xam$holons[[cHC]])
+    identityNamesByDependencyAttr = 
+      mapply(
+        function(hC, dependencyAttr) {
+          # for an individual holonCollection, get a unique list of the associated identity names
+          identityNames = unique(unlist(NEO_HolonAttr(hC, model, "identity")))
+          identityList = 
+            sapply(
+              identityNames, 
+              function(identityName) {
+                # for each identityName, get the identity and the associated behaviors
+                behaviors = get(identityName, envir = model$identities)$myBehaviors
+                dependantXams = 
+                  sapply(
+                    behaviors,
+                    willy,
+                    dependencyAttr,
+                    xam,
+                    dynamsNamesByPhaseList,
+                    xamPhase
+                  )
+              }, 
+              simplify = F)
+        },
+        holonCollectionsByDependencyAttr, 
+        names(holonCollectionsByDependencyAttr),
+        SIMPLIFY = F
+      )
+   }
+ 
+  #get the holon collections for each calculation attribute
+  dependenciesByXamList= 
+    mapply(
+      TESTIT,
+      calcHolonCollectionNamesByXam,
+      xamList, 
+      SIMPLIFY = F
+    )
+  
+
+  return(model)
 }
 
 makeNetwork = function() {

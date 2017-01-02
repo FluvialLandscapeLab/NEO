@@ -39,7 +39,7 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
   missingArgs = !(names(reqArgs) %in% names(dots))
   if(any(missingArgs)) stop("The following parameters are required by NEO_Calculation '", calculationName, "' but were not supplied to NEO_", xamTypeCap, "(): ", paste0(names(reqArgs)[missingArgs], collapse = ", "))
 
-  # make a matrix with rows called "holons" and "attribute" which contain the
+  # make a matrix with rows called "holons" and "holonAttr" which contain the
   # context names and attributes passed as arguments to the dynam calculation.
   # One column for each argument.
   splitDots =
@@ -53,7 +53,10 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
       }
     )
 
-  splitDots = t(matrix(unlist(splitDots), nrow = 2, dimnames = list(c("holons", "attribute"), names(splitDots))))
+  calcHolonsCollections = sapply(splitDots, "[", 1)
+  calcHolonAttrs = sapply(splitDots, "[", 2)
+  
+#  splitDots = t(matrix(unlist(splitDots), nrow = 2, dimnames = list(c("holons", "holonAttr"), names(splitDots))))
 
   newXam = NEO_Environment(xamName, model[[xamTypes]], paste0("NEO_", xamTypeCap))
 
@@ -64,8 +67,9 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
   # }
 
   newXam$holons = NEO_Environment("holons", newXam, "NEO_Bin")
-  attr(newXam, "attribute") = attributeName
-  attr(newXam, "calcArguments") = as.data.frame(splitDots, stringsAsFactors = F)
+  attr(newXam, "targetAttr") = attributeName
+  attr(newXam, "calcHolonCollections") = calcHolonsCollections
+  attr(newXam, "calcHolonAttrs") = calcHolonAttrs
   attr(newXam, "calculation") = calculation
 
   return(newXam)
