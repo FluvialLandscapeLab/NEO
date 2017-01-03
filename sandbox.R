@@ -27,8 +27,8 @@ doit = function() {
   NEO_Calculation(
     "echoValue",
     helton,
-    function(value) {
-      return(value)
+    function(echo) {
+      return(echo)
     }
   )
 
@@ -79,7 +79,7 @@ doit = function() {
     helton,
     "echoValue",
     "water",
-    value = "fromVertices.water"
+    echo = "fromVertices.water"
   )
   
   # NO3 VERTICES
@@ -112,7 +112,7 @@ doit = function() {
     operand2 = "myHolons.water"
   )
   
-  
+  NEO_Phase("initialize", helton, 0)
   NEO_Phase("trade", helton, 1, dynamNames = c("transferAllWater", "advectNO3"))
   NEO_Phase("store", helton, 2, dynamNames = c("accumulateWater", "accumulateNO3", "dissolveNO3"))
 
@@ -131,97 +131,6 @@ doit = function() {
   NEO_Initialize(helton)
 
   invisible(helton)
-}
-
-NEO_XamDependencies = function(model, xamBinName) {
-  
-  xamCollection = paste0("my", toupper(substr(xamBinName, 1, 1)), substr(xamBinName, 2, nchar(xamBinName)))
-  
-  #get all of the dynams and statams
-  xamList = as.list(model[[xamBinName]])
-  
-  #subset the xamList according to the "target" -- that is the variable
-  #calculated by the dyanam.  This will be useful later.
-  xamTargetAttr = sapply(xamList, attr, "targetAttr")
-  xamsByTarget = 
-    sapply(
-      unique(xamTargetAttr), 
-      function(tA) {
-        xamList[xamTargetAttr == tA]
-      },
-      simplify = F
-    )
-
-  # get the holon collections and attributes that are passed to the xam calculation  
-  calcHolonCollectionNamesByXam = 
-    sapply(
-      xamList, 
-      function(xam) structure(attr(xam, "calcHolonCollections"), names = attr(xam, "calcHolonAttrs")),
-      simplify = F
-    )
-  calcHolonAttrsNamesByXam = sapply(xamList, attr, "calcHolonAttrs", simplify = F)
-
-  willy = function(behavior, dependencyAttr, xam, dynamsNamesByPhaseList, xamPhase) {
-    #for each behavior, get the xams
-    potentialDependencies = behavior[[xamCollection]]
-    #determine which xams calculate the dependencyAttr of the holonCollection
-    pDIdx = sapply(potentialDependencies, attr, "targetAttr") == dependencyAttr
-    #determine which potential dependencies are in the same
-    #calculation phase as the xam
-    if (inherits(xam, "NEO_Dynam")) {
-      pDIdx = pDIdx & (names(potentialDependencies) %in% dynamsNamesByPhaseList[[xamPhase]])
-    }
-    potentialDependencies[pDIdx]
-  }
-  
-  
-   
-  TESTIT =  function(holonCollectionNamesByDependencyAttr, xam) {
-    xamTargetAttr = attr(xam, "targetAttr")
-    dynamsNamesByPhaseList = lapply(as.list(model$phases), function(phase) names(phase$myDynams))
-    xamPhase = names(dynamsNamesByPhaseList)[sapply(dynamsNamesByPhaseList, function(dNames) attr(xam, "name") %in% dNames)]
-    
-    holonCollectionsByDependencyAttr = lapply(holonCollectionNamesByDependencyAttr, function(cHC) xam$holons[[cHC]])
-    identityNamesByDependencyAttr = 
-      mapply(
-        function(hC, dependencyAttr) {
-          # for an individual holonCollection, get a unique list of the associated identity names
-          identityNames = unique(unlist(NEO_HolonAttr(hC, model, "identity")))
-          identityList = 
-            sapply(
-              identityNames, 
-              function(identityName) {
-                # for each identityName, get the identity and the associated behaviors
-                behaviors = get(identityName, envir = model$identities)$myBehaviors
-                dependantXams = 
-                  sapply(
-                    behaviors,
-                    willy,
-                    dependencyAttr,
-                    xam,
-                    dynamsNamesByPhaseList,
-                    xamPhase
-                  )
-              }, 
-              simplify = F)
-        },
-        holonCollectionsByDependencyAttr, 
-        names(holonCollectionsByDependencyAttr),
-        SIMPLIFY = F
-      )
-   }
- 
-  #get the holon collections for each calculation attribute
-  dependenciesByXamList= 
-    mapply(
-      TESTIT,
-      calcHolonCollectionNamesByXam,
-      xamList, 
-      SIMPLIFY = F
-    )
-  
-
-  return(model)
 }
 
 makeNetwork = function() {
@@ -252,23 +161,4 @@ makeNetwork = function() {
 
   return(network)
 }
-
-# # gets objectes in the "names" list from a NEO_Bin object.
-# NEO_EnvironmentList = function(names, NEO_Bin) {
-#   envList =
-#     lapply(
-#       names,
-#       function(nm) {
-#         if(nm == "myHolons") {
-#           target = NULL
-#         } else {
-#           target = NEO_Bin[[nm]]
-#           if(is.null(target)) stop("Item '", nm, "', requested from model$", attr(NEO_Bin, "name"), ", does not exist.")
-#         }
-#         return(target)
-#       }
-#     )
-#   names(envList) = lapply(envList, attr, which = "name")
-#   return(envList)
-# }
 
