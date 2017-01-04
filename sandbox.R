@@ -48,11 +48,52 @@ doit = function() {
     }
   )
 
-  NEO_Context("fromEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[to(.v)]))
-  NEO_Context("toEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[from(.v)]))
-  NEO_Context("fromVertices", helton, function() V(network)[from(myHolons)])
-  NEO_Context("toVertices", helton, function() V(network)[to(myHolons)])
+#### CONTEXTS ####
 
+  NEO_Context(
+    "fromEdgeList", 
+    helton, 
+    function() {
+      Es = lapply(myHolons, function(.v) names(E(network)[to(.v)]))
+      names(Es) = names(myHolons)
+      class(Es) = "NEO_EdgeNamesList"
+      return(Es)
+    }
+  )
+  
+  NEO_Context(
+    "toEdgeList", 
+    helton, 
+    function() {
+      Es = lapply(myHolons, function(.v) names(E(network)[from(.v)]))
+      names(Es) = names(myHolons)
+      class(Es) = "NEO_EdgeNamesList"
+      return(Es)
+    }
+  )
+  
+  NEO_Context(
+    "fromVertices", 
+    helton, 
+    function() {
+      Vs = sapply(myHolons, function(.e) names(V(network)[from(.e)]))
+      names(Vs) = names(myHolons)
+      class(Vs) = "NEO_VertexNames"
+      return(Vs)
+    }
+  )
+      
+  NEO_Context(
+    "toVertices", 
+    helton, 
+    function() {
+      Vs = sapply(myHolons, function(.e) names(V(network)[to(.e)]))
+      names(Vs) = names(myHolons)
+      class(Vs) = "NEO_VertexNames"
+      return(Vs)
+    }
+  )
+  
   # WATER: VERTICES
   NEO_Dynam(
     "accumulateWater",
@@ -128,8 +169,8 @@ doit = function() {
 
   helton$network = makeNetwork()
 
-  NEO_Initialize(helton)
-
+  NEO_Execute(helton)
+  
   invisible(helton)
 }
 
@@ -151,10 +192,12 @@ makeNetwork = function() {
 
   V(network)[StreamVs]$identity = "StreamSegment.Accumulation"
   V(network)[StreamVs]$water = 0
+  V(network)[StreamVs]$NO3Conc = 0
 
   V(network)[HillVs]$identity = "HillSlope.ConstantYield"
   V(network)[HillVs]$waterYield = 1
   V(network)[HillVs]$area = 10
+  V(network)[HillVs]$NO3Conc = 5
 
   E(network)$name = attr(E(network), "vnames")
   E(network)$identity = "StreamXSec.TransferAll"

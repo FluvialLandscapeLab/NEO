@@ -5,7 +5,7 @@ NEO_Phase = function(phaseName, model, order, dynamNames = NULL) {
 
   if(phaseName %in% ls(model$phases)) stop("Duplicate phase name.  Attempt to define NEO_Phase '", phaseName, "' more then once.")
 
-  newPhase = NEO_Environment(phaseName, model$phases, "NEO_Context")
+  newPhase = NEO_Environment(phaseName, model$phases, "NEO_Phase")
 
   newPhase$order = order
   if(order == 0) {

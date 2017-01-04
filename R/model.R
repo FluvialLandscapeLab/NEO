@@ -35,26 +35,80 @@ as.list.NEO_Bin = function(x) {
 NEO_DefaultUnits = function() return(c(L = "m", t = "s", M = "kg", T = "degC", E = "kJ"))
 
 #' @export
-NEO_HolonAttr = function(holons, model, attributeName) {
+NEO_HolonAttr = function(model, attributeName, holons) {
   UseMethod("NEO_HolonAttr", holons)
 }
 
 #' @export
-NEO_HolonAttr.igraph.es = function(holons, model, attributeName) {
+NEO_HolonAttr.igraph.es = function(model, attributeName, holons) {
   igraph::edge_attr(model$network, attributeName, holons)
 }
 
 #' @export
-NEO_HolonAttr.igraph.vs = function(holons, model, attributeName) {
+NEO_HolonAttr.igraph.vs = function(model, attributeName, holons) {
   igraph::vertex_attr(model$network, attributeName, holons)
 }
 
 #' @export
-NEO_HolonAttr.igraph.es.list = function(holons, model, attributeName) {
-  lapply(holons, igraph::edge_attr, graph = model$network, name = attributeName)
+NEO_HolonAttr.NEO_EdgeNames = function(model, attributeName, holons) {
+  igraph::edge_attr(model$network, attributeName, igraph::E(model$network)[holons])
 }
 
 #' @export
-NEO_HolonAttr.igraph.vs.list = function(holons, model) {
-  lapply(holons, igraph::vertex_attr, graph = model$network, name = attributeName)
+NEO_HolonAttr.NEO_VertexNames = function(model, attributeName, holons) {
+  igraph::vertex_attr(model$network, attributeName, igraph::V(model$network)[holons])
 }
+
+#' @export
+NEO_HolonAttr.NEO_EdgeNamesList = function(model, attributeName, holons) {
+  lapply(holons, function(hln) igraph::edge_attr(model$network, attributeName, E(model$network)[match(hln, names(E(helton$network)))]))
+}
+
+#' @export
+NEO_HolonAttr.NEO_VertexNamesList = function(model, attributeName, holons) {
+  lapply(holons, function(hln) igraph::vertex_attr(model$network, attributeName, V(model$network)[match(hln, names(V(helton$network)))]))
+}
+
+#' @export
+`NEO_HolonAttr<-` = function(model, attributeName, holons, value) {
+  UseMethod("NEO_HolonAttr<-", holons)
+}
+
+#' @export
+`NEO_HolonAttr<-.NEO_EdgeNames` = function(model, attributeName, holons, value) {
+  model$network = igraph::set.edge.attribute(model$network, attributeName, E(model$network)[holons], value)
+  return(model)
+}
+
+#' @export
+`NEO_HolonAttr<-.NEO_VertexNames` = function(model, attributeName, holons, value) {
+  model$network = igraph::set.vertex.attribute(model$network, attributeName, V(model$network)[holons], value)
+  return(model)
+}
+
+#' @export
+`NEO_HolonAttr<-.igraph.es` = function(model, attributeName, holons, value) {
+  model$network = igraph::set.edge.attribute(model$network, attributeName, holons, value)
+  return(model)
+}
+
+#' @export
+`NEO_HolonAttr<-.igraph.vs` = function(model, attributeName, holons, value) {
+  model$network = igraph::set.vertex.attribute(model$network, attributeName, holons, value)
+  return(model)
+}
+
+
+# `NEO_HolonAttr<-NEO_EdgeNamesList` = function(model, attributeName, holons, value) {
+#   for(hlns in holons) {
+#     model$network = igraph::set.edge.attribute(model$network, attributeName, hlns, value)
+#   }
+#   return(model)
+# }
+# 
+# `NEO_HolonAttr<-NEO_VertexNamesList` = function(model, attributeName, holons, value) {
+#   for(hlns in holons) {
+#     model$network = igraph::set.vertex.attribute(model$network, attributeName, hlns, value)
+#   }
+#   return(model)
+# }
