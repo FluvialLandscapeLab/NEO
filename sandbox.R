@@ -49,10 +49,14 @@ doit = function() {
   )
 
 #### CONTEXTS ####
+  # NEO_Context("fromEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[to(.v)]))
+  # NEO_Context("toEdgeList", helton, function() lapply(myHolons, function(.v) E(network)[from(.v)]))
+  # NEO_Context("fromVertices", helton, function() V(network)[from(myHolons)])
+  # NEO_Context("toVertices", helton, function() V(network)[to(myHolons)])
 
   NEO_Context(
-    "fromEdgeList", 
-    helton, 
+    "fromEdgeList",
+    helton,
     function() {
       Es = lapply(myHolons, function(.v) names(E(network)[to(.v)]))
       names(Es) = names(myHolons)
@@ -60,10 +64,10 @@ doit = function() {
       return(Es)
     }
   )
-  
+
   NEO_Context(
-    "toEdgeList", 
-    helton, 
+    "toEdgeList",
+    helton,
     function() {
       Es = lapply(myHolons, function(.v) names(E(network)[from(.v)]))
       names(Es) = names(myHolons)
@@ -71,10 +75,10 @@ doit = function() {
       return(Es)
     }
   )
-  
+
   NEO_Context(
-    "fromVertices", 
-    helton, 
+    "fromVertices",
+    helton,
     function() {
       Vs = sapply(myHolons, function(.e) names(V(network)[from(.e)]))
       names(Vs) = names(myHolons)
@@ -82,10 +86,10 @@ doit = function() {
       return(Vs)
     }
   )
-      
+
   NEO_Context(
-    "toVertices", 
-    helton, 
+    "toVertices",
+    helton,
     function() {
       Vs = sapply(myHolons, function(.e) names(V(network)[to(.e)]))
       names(Vs) = names(myHolons)
@@ -191,7 +195,8 @@ makeNetwork = function() {
   #  HillEs = Es[from(HillVs)]
 
   V(network)[StreamVs]$identity = "StreamSegment.Accumulation"
-  V(network)[StreamVs]$water = 0
+  V(network)[StreamVs]$water = 1
+  V(network)[StreamVs]$NO3 = 0
   V(network)[StreamVs]$NO3Conc = 0
 
   V(network)[HillVs]$identity = "HillSlope.ConstantYield"
