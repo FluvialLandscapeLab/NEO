@@ -14,6 +14,8 @@ NEO_Execute = function(model) {
 
   NEO_ExecutePhases(initializePhase, model)
   NEO_ExecutePhases(executePhases, model)
+  
+  invisible(model)
 }
 
 
