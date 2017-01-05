@@ -1,4 +1,3 @@
-#' @export
 NEO_BuildModel = function(model) {
   
   ### CHECK TO BE SURE ALL DYNAMS ARE IN ONE AND ONLY ONE CALCULATION PHASE.
@@ -27,25 +26,39 @@ NEO_XamContexts = function(model) {
   # gather list of dynams and statams
   xamList = c(as.list(model$dynams), as.list(model$statams))
   
-  # extract the class
+  # Create a list containing, for each xam, the associated contexts that are
+  # referenced by the xam calculation objects.  The names of these contexts are
+  # stored in the "calcHolonCollection" attribute of the xam
   contextNamesByXam = lapply(xamList, function(d) attr(d, which = "calcHolonCollections"))
   contextNamesByXam = lapply(contextNamesByXam, function(nm) unique(nm[nm != "myHolons"]))
   contextsByXam = lapply(contextNamesByXam, function(ns) as.list(model$contexts)[ns])
-  
+
+  # Run the "context" function of each NEO_Context and store the resulting holon
+  # reference list (index value for specific edges or vertices in model$network)
+  # in the "holons" environment of the xam
   mapply(
     function(xam, contexts) {
       lapply(
         contexts,
         function(con) {
+          # check to be sure we're not overwriting an existing holon reference list.
           conName = attr(con, "name")
-          if(conName %in% ls(xam$holons)) stop("Attempt to define context '", conName, "' in ", attr(xam, "class")[1], " '", attr(xam, "name"), "' more than once.")
+          if(conName %in% ls(xam$holons)) stop("Attempt to define holon reference list '", conName, "' in ", attr(xam, "class")[1], " '", attr(xam, "name"), "' more than once.  Usually, this is called by defining two NEO_Contexts with the same name in a single model.")
+          # set the environment of the "context" function to the xam.  This
+          # makes all of the variables in the xam available to the function
           environment(con$context) = xam$holons
+          # create the holon reference list
           holonCollection = con$context()
+          # if the "context" function creates a list...
           if(class(holonCollection) == "list") {
+            # make a vector of all of the classes in the list
             holonClass = unique(sapply(holonCollection, class))
+            # if the list contains more than one class of holon reference lists, this is a bad thing...
             if(length(holonClass) > 1) stop("Holon list '", conName,"' of ", class(xam), " '", attr(xam, "name"), "' has more than one type of holon." )
+            # otherwise, tag the list as a igraph.vs.list or an igraph.es.list
             class(holonCollection) = c(paste0(holonClass, ".list"))
           }
+          # store the holon reference list in the xam
           xam$holons[[conName]] = holonCollection
         }
       )
@@ -136,29 +149,41 @@ NEO_XamMyHolons = function(model, xamBinName) {
   invisible(model)
 }
 
+# Create the MyStatams and MyDynams objects in each identity.  These objects
+# contian a list of unique dynams and statams referenced by all of the behaviors
+# in the identity.  The list is named according to the variable calculated by each xam
 NEO_IdentityMyXams = function(model, xamBinName) {
+  # create a few variants on xamBinName that will be useful later...
   capXamType = paste0(toupper(substr(xamBinName, 1, 1)), substr(xamBinName, 2, nchar(xamBinName) - 1))
   xamCollection = paste0("my", capXamType, "s")
-  
+
+  # get all the identities from the model  
   identities = as.list(model$identities)
-  behaviorsByIdentity = 
-    lapply(
-      identities, 
-      function(ident) {
-        xams = unlist(
-          lapply(
-            ident$myBehaviors,
-            function(behav) behav[[xamCollection]]
-          ),
-          recursive = F
-        )
-        names(xams) = sapply(xams, attr, "targetAttr")
-        dupXams = duplicated(names(xams))
-        if(any(dupXams)) stop("In NEO_Identity '", attr(ident, "name"), "', more than one NEO_", capXamType, " is defined to calculate to following holon attributes: ", paste0(names(dynams)[dupDynams], collapse = ", "))
-        ident[[xamCollection]] = xams
-      }
-    )
   
+  # create a list containing, for each identity, a list of xams 
+  lapply(
+    # for each identity...
+    identities, 
+    function(ident) {
+      # get a flat list of all xams associated with the identity
+      xams = unlist(
+        lapply(
+          ident$myBehaviors,
+          function(behav) behav[[xamCollection]]
+        ),
+        recursive = F
+      )
+      # set the names of the list to the name of the variable calculated by the xams in the list.
+      names(xams) = sapply(xams, attr, "targetAttr")
+      # be sure that none of the behavior are competing to calculate the same variable.
+      dupXams = duplicated(names(xams))
+      if(any(dupXams)) stop("In NEO_Identity '", attr(ident, "name"), "', more than one NEO_", capXamType, " is defined to calculate to following holon attributes: ", paste0(names(dynams)[dupDynams], collapse = ", "), "\nUsually this means that two different behaviors in the idenity have statums or dynams that calculate the same variable.")
+      # save the xam list in the identity
+      ident[[xamCollection]] = xams
+    }
+  )
+
+  invisible(model)  
 }
 
 NEO_XamDependencies = function(model, xamBinName) {
@@ -229,14 +254,19 @@ NEO_XamDependencies = function(model, xamBinName) {
             ),
             recursive = F
           )
+        # set the list names to the name of dependencies in the list.
         names(xam$myDependencies) = sapply(xam$myDependencies, attr, "name")
         return(xam$myDependencies)
       },
       simplify = F
     )
   
+  # get a list of the phases used by the model.  A model uses the phase if the
+  # name of the phase in the in the names of the "xamsNamesByPhaseList"
   phases = as.list(model$phases)[names(xamsNamesByPhaseList)]
   
+  # create dependency pairs, which are vectors of two dynam names.  The second
+  # dynam is dependent on the first
   dependencyPairsList =
     lapply(
       phases,
@@ -273,6 +303,8 @@ NEO_XamDependencies = function(model, xamBinName) {
   invisible(model)
 }
 
+# reorders a list of dynams or statams to account for dependencies.  This way,
+# dependency xams are always calculated before dependent xams.
 NEO_CalculationOrder = function(phase, dependencyPairs, xamCollectionName) {
   # make a directed graph from the dependency pairs
   depGraph = igraph::graph(edges = dependencyPairs, directed = T)

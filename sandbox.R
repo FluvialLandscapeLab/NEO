@@ -1,14 +1,4 @@
-#To set dependencies, will have to be able to look up the list of dynams that
-#calculate each value referenced.  Any dynam in the same calculation step will
-#be a dependency.  This means that I may have to create an attribute that
 
-#To set dependencies
-# 1) for each referenced value...
-# 2) in holon, look at behavior for the value
-# 3) in behavior, find at dynam for the value
-# 4) get unique list of dynams
-# 5) eliminate any dynams that are not in the same calculation set.
-# 6) remainder are dependencies.
 
 library(igraph)
 

@@ -1,9 +1,9 @@
-Package: leaky
+Package: NEO
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Network Exchange Objects
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Author: Geoffrey Poole
+Maintainer: Geoffrey Poole <gpoole@montana.edu>
+Description: NEO allows R users to construct and manage complex simulation models where systems are represented as networks (graphs) through which "currencies" flow.  The currencies are stored in network vertices and flow through network edges.  Flow rates are calculated from vertex and edge attributes, which themselves may be dynamic.
+License: Prototype.  Not yet licensed...  Please contact Geoffrey Poole
 LazyData: TRUE

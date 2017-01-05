@@ -56,17 +56,11 @@ NEO_Xam = function(xamName, model, calculationName, attributeName, xamType, ...)
   calcHolonsCollections = sapply(splitDots, "[", 1)
   calcHolonAttrs = sapply(splitDots, "[", 2)
   
-#  splitDots = t(matrix(unlist(splitDots), nrow = 2, dimnames = list(c("holons", "holonAttr"), names(splitDots))))
+  # create the xam obejct
+  newXam = NEO_Environment(xamName, paste0("NEO_", xamTypeCap), model[[xamTypes]])
 
-  newXam = NEO_Environment(xamName, model[[xamTypes]], paste0("NEO_", xamTypeCap))
-
-  # duplicateNames = names(dots) %in% ls(newXam)
-  # if(any(duplicateNames)) {
-  #   rm(xamName, envir = model[[xamTypes]])
-  #   stop("The NEO_calculation '", calculationName, "' uses parameter names (", paste0(names(dots)[duplicateNames], collapse = ", "), ") that collide with default variable names used by dyanms.  Rewrite the calculation to use different parameter names.")
-  # }
-
-  newXam$holons = NEO_Environment("holons", newXam, "NEO_Bin")
+  # set some attributes and variables.
+  newXam$holons = NEO_Environment("holons", "NEO_Bin", newXam)
   attr(newXam, "targetAttr") = attributeName
   attr(newXam, "calcHolonCollections") = calcHolonsCollections
   attr(newXam, "calcHolonAttrs") = calcHolonAttrs

@@ -1,21 +1,21 @@
 #' @export
 NEO_Model = function(modelName, units = NEO_DefaultUnits(), envir = globalenv()){
-  newModel = structure(
-    new.env(),
-    class = c("NEO_Model", "NEO_Environment"),
-    name = modelName
-  )
-
-  NEO_Environment("dynams", newModel, "NEO_Bin")
-  NEO_Environment("statams", newModel, "NEO_Bin")
-  NEO_Environment("contexts", newModel, "NEO_Bin")
-  NEO_Environment("calculations", newModel, "NEO_Bin")
-  NEO_Environment("behaviors", newModel, "NEO_Bin")
-  NEO_Environment("identities", newModel, "NEO_Bin")
-  NEO_Environment("phases", newModel, "NEO_Bin")
 
   if(!identical(sort(names(units)), sort(names(NEO_DefaultUnits())))) stop("Names of 'units' vector must be: ", print0("\"", names(NEO_DefaultUnits), "\"", collapse = ", "))
+  
+  # create a NEO_Model
+  newModel = NEO_Environment(modelName, "NEO_Model")
 
+  # install required NEO_Bin environments to contain model objects
+  NEO_Environment("dynams", "NEO_Bin", newModel)
+  NEO_Environment("statams", "NEO_Bin", newModel)
+  NEO_Environment("contexts", "NEO_Bin", newModel)
+  NEO_Environment("calculations", "NEO_Bin", newModel)
+  NEO_Environment("behaviors", "NEO_Bin", newModel)
+  NEO_Environment("identities", "NEO_Bin", newModel)
+  NEO_Environment("phases", "NEO_Bin", newModel)
+
+  #intall some global variables.
   newModel$units = units
   newModel$timeStep = NULL
   newModel$outputInterval = NULL
@@ -24,6 +24,7 @@ NEO_Model = function(modelName, units = NEO_DefaultUnits(), envir = globalenv())
   invisible(newModel)
 }
 
+#' Get contents of a NEO_Bin as a named list.
 #' @export
 as.list.NEO_Bin = function(x) {
   binList = lapply(ls(x), get, envir = x, inherits = F)
@@ -31,9 +32,13 @@ as.list.NEO_Bin = function(x) {
   return(binList)
 }
 
+#' Return default units for NEO models.
 #' @export
 NEO_DefaultUnits = function() return(c(L = "m", t = "s", M = "kg", T = "degC", E = "kJ"))
 
+##### NEO_HolonAttr #############################
+
+#' Return attribute values of holons (graph vertices or edges) using a colleciton (vector or list of vectors) of vertex or edge indices
 #' @export
 NEO_HolonAttr = function(model, attributeName, holons) {
   UseMethod("NEO_HolonAttr", holons)
